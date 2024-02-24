@@ -19,7 +19,7 @@ class SniffSession:
         self.protocols_stats = {
             "Application": {"DNS": 0, "HTTP": 0},
             "Transport": {"TCP": 0, "UDP": 0},
-            "Network": {"DHCP": 0, "ICMP": 0},
+            "Network": {"DHCP": 0, "ICMP":0,"IP": 0},
             "Link layer": {"ARP": 0, "Ethernet": 0}
         }
         self.how_many_packets = how_many_packets
@@ -83,38 +83,38 @@ class SniffSession:
             packet_stats = {
                 'from_src': 0,
                 'to_src': 0,
-                'dhcp_sent': 0,
+                'layer1,2_sent': 0,
                 'trs_sent': 0,
-                'dhcp_received': 0,
+                'layer1,2_received': 0,
                 'trs_received': 0,
             }
 
             for packet in local_net_packets:
                 if str(packet[IP].src) == str(ip.get_ip()):
                     packet_stats['from_src'] += 1
-                    try:
-                        protocol = TCP if TCP in packet else UDP
+                    protocol = packet[IP].proto
+                    if protocol == 6 or protocol == 7:
                         ports_for_sending[packet[protocol].sport] += 1
                         packet_stats['trs_sent'] += 1
-                    except KeyError:
-                        packet_stats['dhcp_sent'] += 1
+                    else:
+                        packet_stats['layer1,2_sent'] += 1
                 elif str(packet[IP].dst) == str(ip.get_ip()):
                     packet_stats['to_src'] += 1
-                    try:
-                        protocol = TCP if TCP in packet else UDP
-                        ports_for_receiving[packet[protocol].dport] += 1
+                    protocol = packet[IP].proto
+                    if protocol == 6 or protocol == 7:
+                        ports_for_receiving[packet[protocol].sport] += 1
                         packet_stats['trs_received'] += 1
-                    except KeyError:
-                        packet_stats['dhcp_received'] += 1
+                    else:
+                        packet_stats['layer1,2_received'] += 1
 
             self.ip_report(ip, ports_for_sending, ports_for_receiving, packet_stats)
 
     def ip_report(self, ip, ports_for_sending, ports_for_receiving, packet_stats):
         print(f"On the local network, IP {ip.get_ip()} sent: {packet_stats['from_src']} packets")
         self.append_to_sniff_summary(f"On the local network, IP {ip.get_ip()} sent: {packet_stats['from_src']} packets")
-        print(f"The local IP {ip.get_ip()} sent this many DHCP packets: {packet_stats['dhcp_sent']}")
+        print(f"The local IP {ip.get_ip()} sent this many only layer 1 and 2 packets: {packet_stats['layer1,2_sent']}")
         self.append_to_sniff_summary(
-            f"The local IP {ip.get_ip()} sent this many DHCP packets: {packet_stats['dhcp_sent']}")
+            f"The local IP {ip.get_ip()} sent this many only layer 1 and 2 packets: {packet_stats['layer1,2_sent']}")
         print(f"The local IP {ip.get_ip()} sent this many transport layer packets: {packet_stats['trs_sent']}")
         self.append_to_sniff_summary(
             f"The local IP {ip.get_ip()} sent this many transport layer packets: {packet_stats['trs_sent']}")
@@ -127,9 +127,9 @@ class SniffSession:
         print(f"On the local network, IP {ip.get_ip()} received: {packet_stats['to_src']} packets")
         self.append_to_sniff_summary(
             f"On the local network, IP {ip.get_ip()} received: {packet_stats['to_src']} packets")
-        print(f"The local IP {ip.get_ip()} received this many DHCP packets: {packet_stats['dhcp_received']}")
+        print(f"The local IP {ip.get_ip()} received this many only layer 1 and 2 packets: {packet_stats['layer1,2_received']}")
         self.append_to_sniff_summary(
-            f"The local IP {ip.get_ip()} received this many DHCP packets: {packet_stats['dhcp_received']}")
+            f"The local IP {ip.get_ip()} received this many only layer 1 and 2 packets: {packet_stats['layer1,2_received']}")
         print(f"The local IP {ip.get_ip()} received this many transport layer packets: {packet_stats['trs_received']}")
         self.append_to_sniff_summary(
             f"The local IP {ip.get_ip()} received this many transport layer packets: {packet_stats['trs_received']}")
@@ -283,20 +283,22 @@ class SniffSession:
         for packet in packets:
             if HTTP in packet:
                 self.protocols_stats["Application"]["HTTP"] += 1
-            elif DNS in packet:
+            if DNS in packet:
                 self.protocols_stats["Application"]["DNS"] += 1
-            elif TCP in packet:
+            if TCP in packet:
                 self.protocols_stats["Transport"]["TCP"] += 1
-            elif UDP in packet:
+            if UDP in packet:
                 self.protocols_stats["Transport"][
                     "UDP"] += 1  # add another for loop with all protocols, instead of a lot of "if"
-            elif DHCP in packet:
+            if DHCP in packet:
                 self.protocols_stats["Network"]["DHCP"] += 1
-            elif ICMP in packet:
+            if IP in packet:
+                self.protocols_stats["Network"]["IP"] += 1
+            if ICMP in packet:
                 self.protocols_stats["Network"]["ICMP"] += 1
-            elif ARP in packet:
+            if ARP in packet:
                 self.protocols_stats["Link layer"]["ARP"] += 1
-            elif Ether in packet:
+            if Ether in packet:
                 self.protocols_stats["Link layer"]["Ethernet"] += 1
         for key in self.protocols_stats:
             print("From layer: " + str(key))
