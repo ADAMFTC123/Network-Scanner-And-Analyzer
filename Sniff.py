@@ -94,16 +94,22 @@ class SniffSession:
                     packet_stats['from_src'] += 1
                     protocol = packet[IP].proto
                     if protocol == 6 or protocol == 7:
-                        ports_for_sending[packet[protocol].sport] += 1
-                        packet_stats['trs_sent'] += 1
+                        try:
+                            ports_for_sending[packet[protocol].sport] += 1
+                            packet_stats['trs_sent'] += 1
+                        except:
+                            packet_stats['trs_sent'] += 1
                     else:
                         packet_stats['layer1,2_sent'] += 1
                 elif str(packet[IP].dst) == str(ip.get_ip()):
                     packet_stats['to_src'] += 1
                     protocol = packet[IP].proto
                     if protocol == 6 or protocol == 7:
-                        ports_for_receiving[packet[protocol].sport] += 1
-                        packet_stats['trs_received'] += 1
+                        try:
+                            ports_for_receiving[packet[protocol].sport] += 1
+                            packet_stats['trs_received'] += 1
+                        except:
+                            packet_stats['trs_received'] += 1
                     else:
                         packet_stats['layer1,2_received'] += 1
 
